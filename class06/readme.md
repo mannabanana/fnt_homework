@@ -1,1 +1,1 @@
-Запускаемый скрипт в папке /home/user14/postgres
+Запускаемый скрипт /home/user14/postgres/db.py
