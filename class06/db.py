@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python36
 import psycopg2
 import os
 from config import config
 
 def create_tables():
     """ create tables in the PostgreSQL database"""
-    
+
     commands = ("""
         CREATE TABLE customers (
             cust_id SERIAL PRIMARY KEY,
@@ -63,12 +63,14 @@ def insert_good(order_id, good_id):
     order_item_id = cur.fetchone()[0]
     # commit the changes to the database
     conn.commit()
+    print "Good id",good_id,"was inserted in order",order_id
 
 def delete_good(order_id, good_id):
     """ delete good by good id """
     item_id = order_search(order_id, good_id)
     cur.execute("DELETE FROM order_items WHERE order_item_id = %s", (item_id,))
     conn.commit()
+    print "Good id",good_id,"was deleted in order",order_id
 
 def update_good(quantity, order_id, good_id):
     """ update quantity based on the good id """
@@ -78,35 +80,30 @@ def update_good(quantity, order_id, good_id):
                 WHERE order_item_id = %s"""
     cur.execute(sql, (quantity,item_id,))
     conn.commit()
+    print "Good id",good_id,"was updated in order",order_id
 
 def order_search(order_id, good_id):
-    cur.execute("SELECT * FROM order_items WHERE good_id = %s", (good_id,))
-    rows = cur.fetchall()
-    for row in rows:
-	if int(row[1]) == order_id:
-    	    item_id = row[0]
-	    return item_id
+    cur.execute("SELECT order_item_id FROM order_items WHERE good_id = %s AND order_id = %s", (good_id,order_id,))
+    item_id = cur.fetchone()
+    return item_id
 
 def copy_to_file():
-    cur.execute("COPY (SELECT customers.first_nm, customers.last_nm, goods.name, goods.vendor FROM order_items JOIN goods ON order_items.good_id = goods.good_id JOIN orders ON order_items.order_id = orders.order_id JOIN customers ON customers.cust_id = orders.cust_id) TO '/home/postgres/tables_shop_data.csv' WITH CSV HEADER;")
+    cur.execute("COPY (SELECT customers.first_nm, goods.name, goods.vendor FROM order_items JOIN goods ON order_items.good_id = goods.good_id JOIN orders ON order_items.order_id = orders.order_id JOIN customers ON customers.cust_id = orders.cust_id) TO '/home/postgres/tables_shop_data.csv' WITH CSV HEADER;")
     print("Info has printed to /home/postgres/tables_shop_data.csv")
 
 def check_order_id(order_id):
     cur.execute("SELECT order_id FROM orders WHERE order_id = %s", (order_id,))
-    if cur.rowcount > 0:
-	return True
+    if cur.rowcount == 0:
+	return False
     else:
-        return False
+        return True
 
 def check_good_id(order_id,good_id):
-    cur.execute("SELECT order_id,good_id FROM order_items WHERE good_id = %s", (good_id,))
-    rows = cur.fetchall()
-    order_check = False
-    for row in rows:
-	if int(row[0]) == order_id:
-	    return True
-    return False
-
+    cur.execute("SELECT * FROM order_items WHERE good_id = %s AND order_id = %s", (good_id,order_id,))
+    if cur.rowcount == 0:
+	return False
+    else:
+	return True
 
 
 if __name__ == '__main__':
