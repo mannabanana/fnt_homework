@@ -1,0 +1,88 @@
+Задание 3. Создать тестовые таблицы из раздела Индексы, попробовать добиться похожих рез-тов.
+
+postgres=# create table t(a integer, b text, c boolean);
+CREATE TABLE
+postgres=# insert into t(a,b,c) select s.id, chr((32+random()*94)::integer), random() < 0.01 from generate_series(1,100000) as s(id) order by random();
+INSERT 0 100000
+postgres=# create index on t(a);
+CREATE INDEX
+postgres=# analyze t;
+ANALYZE
+
+postgres=# explain (costs off) select * from t where a = 1;
+          QUERY PLAN
+-------------------------------
+ Index Scan using t_a_idx on t
+   Index Cond: (a = 1)
+(2 rows)
+
+postgres=# explain (costs off) select * from t where a <= 100;
+             QUERY PLAN
+------------------------------------
+ Bitmap Heap Scan on t
+   Recheck Cond: (a <= 100)
+   ->  Bitmap Index Scan on t_a_idx
+         Index Cond: (a <= 100)
+(4 rows)
+
+postgres=# create index on t(b);
+CREATE INDEX
+postgres=# analyze t;
+ANALYZE
+postgres=# explain (costs off) select * from t where a <= 100 and b = 'a';
+                    QUERY PLAN
+--------------------------------------------------
+ Bitmap Heap Scan on t
+   Recheck Cond: ((a <= 100) AND (b = 'a'::text))
+   ->  BitmapAnd
+         ->  Bitmap Index Scan on t_a_idx
+               Index Cond: (a <= 100)
+         ->  Bitmap Index Scan on t_b_idx
+               Index Cond: (b = 'a'::text)
+(7 rows) 
+
+postgres=# select attname, correlation from pg_stats where tablename = 't';
+ attname | correlation
+---------+-------------
+ a       | -0.00768669
+ b       |   0.0161846
+ c       |    0.978622
+(3 rows)
+
+postgres=# explain (costs off) select * from t where a <= 40000;
+       QUERY PLAN
+------------------------
+ Seq Scan on t
+   Filter: (a <= 40000)
+(2 rows)
+
+
+postgres=# vacuum t;
+VACUUM
+postgres=# explain (costs off) select a from t where a < 100;
+             QUERY PLAN
+------------------------------------
+ Index Only Scan using t_a_idx on t
+   Index Cond: (a < 100)
+(2 rows)
+
+postgres=# create index on t(a,b);
+CREATE INDEX
+postgres=# analyze t;
+ANALYZE
+postgres=# explain (costs off) select * from t where a <= 100 and b = 'a';
+                   QUERY PLAN
+------------------------------------------------
+ Index Scan using t_a_b_idx on t
+   Index Cond: ((a <= 100) AND (b = 'a'::text))
+(2 rows)
+
+postgres=# explain (costs off) select * from t where a <= 100;
+              QUERY PLAN
+--------------------------------------
+ Bitmap Heap Scan on t
+   Recheck Cond: (a <= 100)
+   ->  Bitmap Index Scan on t_a_b_idx
+         Index Cond: (a <= 100)
+(4 rows)
+
