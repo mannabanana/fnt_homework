@@ -1,0 +1,192 @@
+Задание 5. Создать тестовые таблицы из раздела План запроса, попробовать добиться похожих рез-тов.
+
+postgres=# create table foo (c1 integer, c2 text);
+CREATE TABLE
+postgres=# insert into foo select i, md5(random()::text) from generate_series(1, 1000000) as i;
+INSERT 0 1000000
+
+postgres=# explain select * from foo;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on foo  (cost=0.00..18334.00 rows=1000000 width=37)
+(1 row)
+
+postgres=# insert into foo select i, md5(random()::text) from generate_series(1,10) as i;
+INSERT 0 10
+postgres=# explain select * from foo;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on foo  (cost=0.00..18334.00 rows=1000000 width=37)
+(1 row)
+
+postgres=# analyze foo;                                                         
+ANALYZE
+postgres=# explain select * from foo;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37)
+(1 row)
+
+postgres=# explain (analyze) select * from foo;
+                                                   QUERY PLAN
+
+----------------------------------------------------------------------------------------------------------------
+ Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37) (actual time=0.008
+..518.561 rows=1000010 loops=1)
+ Total runtime: 994.160 ms
+(2 rows)
+
+postgres=# explain (analyze) select * from foo where c1 > 500;
+                                                  QUERY PLAN
+
+--------------------------------------------------------------------------------------------------------------
+ Seq Scan on foo  (cost=0.00..20834.12 rows=999522 width=37) (actual time=0.067.
+.571.047 rows=999500 loops=1)
+   Filter: (c1 > 500)
+   Rows Removed by Filter: 510
+ Total runtime: 1043.815 ms
+(4 rows)
+
+
+postgres=# explain (analyze) select * from foo order by c1;
+                                                      QUERY PLAN
+
+----------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=145338.51..147838.54 rows=1000010 width=37) (actual time=1593.386..
+2209.328 rows=1000010 loops=1)
+   Sort Key: c1
+   Sort Method: external merge  Disk: 45952kB
+   ->  Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37) (actual time
+=0.006..520.724 rows=1000010 loops=1)
+ Total runtime: 2703.787 ms
+(5 rows)
+
+postgres=# explain (analyze,buffers) select * from foo where c2 like 'ab%' limit 10;
+                                                QUERY PLAN
+
+-----------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..2083.41 rows=10 width=37) (actual time=0.037..0.170 rows=10
+loops=1)
+   Buffers: shared hit=10
+   ->  Seq Scan on foo  (cost=0.00..20834.12 rows=100 width=37) (actual time=0.0
+36..0.161 rows=10 loops=1)
+         Filter: (c2 ~~ 'ab%'::text)
+         Rows Removed by Filter: 1124
+         Buffers: shared hit=10
+ Total runtime: 0.195 ms
+(7 rows)
+
+
+postgres=# create table bar (c1 integer, c2 boolean);
+CREATE TABLE
+postgres=# insert into bar select i, i %2 = 1 from generate_series(1, 500000) as i;
+INSERT 0 500000
+postgres=# analyze bar;
+ANALYZE
+
+postgres=# explain (analyze) select * from foo join bar on foo.c1 = bar.c1;                                                            QUERY PLAN
+
+------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=13463.00..49297.22 rows=500000 width=42) (actual time=578.173.
+.2779.548 rows=500010 loops=1)
+   Hash Cond: (foo.c1 = bar.c1)
+   ->  Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37) (actual time
+=0.006..522.080 rows=1000010 loops=1)
+   ->  Hash  (cost=7213.00..7213.00 rows=500000 width=5) (actual time=578.099..5
+78.099 rows=500000 loops=1)
+         Buckets: 65536  Batches: 1  Memory Usage: 18067kB
+         ->  Seq Scan on bar  (cost=0.00..7213.00 rows=500000 width=5) (actual t
+ime=0.006..259.331 rows=500000 loops=1)
+ Total runtime: 3017.168 ms
+(7 rows)
+
+postgres=# create index on bar(c1);
+CREATE INDEX
+postgres=# create index on foo(c1);
+CREATE INDEX
+postgres=# explain (analyze) select * from foo join bar on foo.c1 = bar.c1;
+                                                               QUERY PLAN
+
+----------------------------------------------------------------------------------------------------------------------------------------
+ Merge Join  (cost=0.66..39887.57 rows=500000 width=42) (actual time=0.021..1513
+.803 rows=500010 loops=1)
+   Merge Cond: (foo.c1 = bar.c1)
+   ->  Index Scan using foo_c1_idx on foo  (cost=0.00..34317.51 rows=1000010 wid
+th=37) (actual time=0.008..328.805 rows=500011 loops=1)
+   ->  Index Scan using bar_c1_idx on bar  (cost=0.00..15212.30 rows=500000 widt
+h=5) (actual time=0.007..325.455 rows=500010 loops=1)
+ Total runtime: 1752.060 ms
+(5 rows)
+
+postgres=# explain (analyze) select * from foo left join bar on foo.c1 = bar.c1;
+                                                       QUERY PLAN
+
+------------------------------------------------------------------------------------------------------------------------
+ Hash Left Join  (cost=13463.00..49297.22 rows=1000010 width=42) (actual time=58
+5.257..3105.521 rows=1000010 loops=1)
+   Hash Cond: (foo.c1 = bar.c1)
+   ->  Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37) (actual time
+=0.005..538.183 rows=1000010 loops=1)
+   ->  Hash  (cost=7213.00..7213.00 rows=500000 width=5) (actual time=585.180..5
+85.180 rows=500000 loops=1)
+         Buckets: 65536  Batches: 1  Memory Usage: 18067kB
+         ->  Seq Scan on bar  (cost=0.00..7213.00 rows=500000 width=5) (actual t
+ime=0.005..262.138 rows=500000 loops=1)
+ Total runtime: 3587.000 ms
+(7 rows)
+
+postgres=# set enable_seqscan to off;
+SET
+postgres=# explain (analyze) select * from foo left join bar on foo.c1 = bar.c1;
+                                                               QUERY PLAN
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Merge Left Join  (cost=0.66..58279.84 rows=1000010 width=42) (actual time=0.017
+..2327.195 rows=1000010 loops=1)
+   Merge Cond: (foo.c1 = bar.c1)
+   ->  Index Scan using foo_c1_idx on foo  (cost=0.00..34317.51 rows=1000010 wid
+th=37) (actual time=0.007..630.410 rows=1000010 loops=1)
+   ->  Index Scan using bar_c1_idx on bar  (cost=0.00..15212.30 rows=500000 widt
+h=5) (actual time=0.006..319.347 rows=500010 loops=1)
+ Total runtime: 2802.797 ms
+(5 rows)
+
+
+postgres=# set work_mem to '15MB';
+SET
+postgres=# set enable_seqscan to on;                                            
+SET
+postgres=# explain (analyze) select * from foo left join bar on foo.c1 = bar.c1;
+                                                               QUERY PLAN
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Merge Left Join  (cost=0.66..58279.84 rows=1000010 width=42) (actual time=0.018
+..2321.905 rows=1000010 loops=1)
+   Merge Cond: (foo.c1 = bar.c1)
+   ->  Index Scan using foo_c1_idx on foo  (cost=0.00..34317.51 rows=1000010 wid
+th=37) (actual time=0.008..629.740 rows=1000010 loops=1)
+   ->  Index Scan using bar_c1_idx on bar  (cost=0.00..15212.30 rows=500000 widt
+h=5) (actual time=0.006..315.617 rows=500010 loops=1)
+ Total runtime: 2797.777 ms
+(5 rows)
+
+postgres=# set work_mem to '15MB';                                              
+SET
+postgres=# set enable_indexscan to off;                                         
+SET
+postgres=# explain (analyze) select * from foo left join bar on foo.c1 = bar.c1;
+                                                       QUERY PLAN
+
+------------------------------------------------------------------------------------------------------------------------
+ Hash Left Join  (cost=15417.00..63831.18 rows=1000010 width=42) (actual time=58
+3.520..2809.955 rows=1000010 loops=1)
+   Hash Cond: (foo.c1 = bar.c1)
+   ->  Seq Scan on foo  (cost=0.00..18334.10 rows=1000010 width=37) (actual time
+=0.005..537.711 rows=1000010 loops=1)
+   ->  Hash  (cost=7213.00..7213.00 rows=500000 width=5) (actual time=583.358..5
+83.358 rows=500000 loops=1)
+         Buckets: 65536  Batches: 2  Memory Usage: 9045kB
+         ->  Seq Scan on bar  (cost=0.00..7213.00 rows=500000 width=5) (actual t
+ime=0.006..260.566 rows=500000 loops=1)
+ Total runtime: 3289.380 ms
+(7 rows)
