@@ -21,7 +21,9 @@ include /etc/nginx/conf.d/*.conf;
 
 ### **2. Сборка и запуск Nginx с VTS-модулем**
 Для того, чтобы можно было увидеть vts как на каритнках поменяла default_server поменяла на test-1, так как имя test-1 не разрешается dns'ом и невозможно посмотреть.
+
 http://s-14.fintech-admin.m1.tinkoff.cloud:8080/status - в формате prometheus
+
 http://s-14.fintech-admin.m1.tinkoff.cloud:8080/status_vhost - в формате html
 
 Команда `nginx -V` выводит список всех модулей, которые включены в состав пакета.
@@ -41,8 +43,11 @@ configure arguments: --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-p
 --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module 
 --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module 
 --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module 
---with-stream_ssl_preread_module --with-stream_ssl_preread_module --add-module=./nginx-module-vts 
---add-module=./ngx_devel_kit-0.3.1rc1 --add-module=./lua-nginx-module-0.10.13 --add-module=./njs/nginx 
+--with-stream_ssl_preread_module --with-stream_ssl_preread_module 
+--add-module=./nginx-module-vts 
+--add-module=./ngx_devel_kit-0.3.1rc1 
+--add-module=./lua-nginx-module-0.10.13 
+--add-module=./njs/nginx 
 --with-cc-opt='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector-strong 
 --param=ssp-buffer-size=4 -grecord-gcc-switches -m64 -mtune=generic -fPIC' --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie'
 ```
