@@ -6,7 +6,8 @@ services:
     restart: unless-stopped
   web:
     build: .
-    command: ./web-run.sh
+    command: python manage.py migrate
+    command: python manage.py runserver 0.0.0.0:8000
     restart: unless-stopped
     volumes:
       - .:/code
