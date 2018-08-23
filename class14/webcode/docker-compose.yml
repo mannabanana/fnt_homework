@@ -1,0 +1,16 @@
+version: '3.5'
+
+services:
+  db:
+    image: postgres
+    restart: unless-stopped
+  web:
+    build: .
+    command: ./web-run.sh
+    restart: unless-stopped
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
