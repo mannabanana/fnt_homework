@@ -21,10 +21,10 @@ include /etc/nginx/conf.d/*.conf;
 
 ### **2. Сборка и запуск Nginx с VTS-модулем**
 Для того, чтобы можно было увидеть vts как на каритнках поменяла default_server поменяла на test-1, так как имя test-1 не разрешается dns'ом и невозможно посмотреть.
+После задания по ansible доступно только по ip адресу:
+http://10.219.180.23:8080/status - в формате prometheus
 
-http://s-14.fintech-admin.m1.tinkoff.cloud:8080/status - в формате prometheus
-
-http://s-14.fintech-admin.m1.tinkoff.cloud:8080/status_vhost - в формате html
+http://10.219.180.23:8080/status_vhost - в формате html
 
 Команда `nginx -V` выводит список всех модулей, которые включены в состав пакета.
 ```bash
