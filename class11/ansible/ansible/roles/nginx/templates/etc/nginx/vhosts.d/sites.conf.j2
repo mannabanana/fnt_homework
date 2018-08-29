@@ -1,0 +1,10 @@
+{% for site in nginx_sites %}
+server {
+    listen 8080;
+    server_name {{ site }};
+    location / {
+        root {{ nginx_sites_location  }}/{{ site }};
+        index index.html;
+    }
+}
+{% endfor %}

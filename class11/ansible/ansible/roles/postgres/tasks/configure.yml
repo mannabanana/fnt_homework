@@ -1,0 +1,24 @@
+---
+- name: Create configuration file postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ postgres_data_dir }}/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: 0600
+  notify: Reload Postgresql
+
+- name: Create configuration file pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgres_data_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: 0600
+  notify: Reload Postgresql
+
+- name: Check service postgresql started and enabled
+  service:
+    name: postgresql
+    state: started
+    enabled: yes

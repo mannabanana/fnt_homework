@@ -1,0 +1,46 @@
+---
+- name: Create configuration file
+  template:
+    src: etc/nginx/nginx.conf.j2
+    dest: "{{ nginx_directory }}/nginx.conf"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload Nginx
+
+- name: “Create {{ nginx_vhosts_folder }}”
+  file:
+    path: "{{ nginx_directory }}/{{ nginx_vhosts_folder }}"
+    state: directory
+
+- name: Put sites.conf for test-1
+  template:
+    src: etc/nginx/vhosts.d/sites.conf.j2
+    dest: "{{ nginx_directory }}/{{ nginx_vhosts_folder }}/1-test.conf"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload Nginx
+
+- name: Create dirs for sites
+  file:
+    path: "{{ nginx_sites_location }}/{{ item }}"
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_user }}"
+    mode: 0755
+    state: directory
+  loop: "{{ nginx_sites  }}"
+
+- name: Put index.html to sites
+  copy:
+    src: files/test-1/index.html
+    dest: "{{ nginx_sites_location }}/test-1/index.html"
+    owner: "{{ nginx_user }}"
+    group: "{{ nginx_user }}"
+    mode: 0644
+
+- name: Enable and run nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true

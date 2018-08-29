@@ -1,0 +1,25 @@
+---
+- name: Install PostgreSQL Server
+  yum:
+    name: postgresql-server
+    state: present
+    update_cache: yes
+
+- name: Get DB exist status
+  stat:
+    path: "{{ postgres_data_dir }}/PG_VERSION"
+  register: pgdata
+
+- name: Ensure PostgreSQL database is initialized
+  command: "sudo -u postgres bash -c 'initdb -D {{ postgres_data_dir }}'"
+  when: not pgdata.stat.exists
+
+- name: Install python-pip
+  yum:
+    name: python-pip
+    state: present
+    update_cache: yes
+
+- name: Install psycopg2
+  pip:
+    name: psycopg2

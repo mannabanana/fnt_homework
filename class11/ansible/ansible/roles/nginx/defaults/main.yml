@@ -1,0 +1,12 @@
+---
+nginx_version: 1.12.2
+nginx_repo: /etc/yum.repos.d/nginx.repo
+listen_http: 8080
+nginx_directory: /etc/nginx
+nginx_vhosts_folder: conf.d
+nginx_user: nginx
+nginx_worker_processes: 1
+nginx_worker_connections: 1024
+nginx_sites:
+  - test-1
+nginx_sites_location: /var/www
